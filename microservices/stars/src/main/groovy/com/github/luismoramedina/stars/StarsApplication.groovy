@@ -3,6 +3,7 @@ package com.github.luismoramedina.stars
 import groovy.util.logging.Slf4j
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.http.HttpHeaders
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
@@ -20,15 +21,10 @@ class StarsApplication {
 
 
 	@RequestMapping(value = "/stars/{id}", method=RequestMethod.GET)
-	Star star(
-			@PathVariable String id,
-			@RequestHeader(value="Authorization", required = false) String auth,
-			@RequestHeader(value="X-B3-TraceId", required = false) String traceId,
-			@RequestHeader(value="Plain-authorization", required = false) String plainAuth) {
+	Star star(@PathVariable Integer id, @RequestHeader HttpHeaders httpHeaders) {
 
-		log.info "traceId: " + traceId
-		log.info "plainAuth: " + plainAuth
-		log.info "auth: " + auth
+		println "New request!"
+		httpHeaders.each { k, v -> println "header: ${k}  ->  ${v}" }
 		def star = new Star()
 		star.number = 5
 		star.id = id
