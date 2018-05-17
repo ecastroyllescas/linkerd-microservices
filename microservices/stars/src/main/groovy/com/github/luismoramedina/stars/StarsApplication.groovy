@@ -20,14 +20,15 @@ class StarsApplication {
 	}
 
 
-	@RequestMapping(value = "/stars/{id}", method=RequestMethod.GET)
+	@RequestMapping(value = "/stars/{id}", method = RequestMethod.GET)
 	Star star(@PathVariable Integer id, @RequestHeader HttpHeaders httpHeaders) {
 
-		println "New request!"
-		httpHeaders.each { k, v -> println "header: ${k}  ->  ${v}" }
+		log.info "New request!"
+		httpHeaders.each { k, v -> log.info "header: ${k}  ->  ${v}" }
 		def star = new Star()
 		star.number = 5
 		star.id = id
+		log.info "Sending response!"
 		star
 	}
 }
