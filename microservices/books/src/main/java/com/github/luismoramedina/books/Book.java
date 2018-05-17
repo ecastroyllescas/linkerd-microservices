@@ -1,4 +1,4 @@
-package com.github.luismoramedina.meshless;
+package com.github.luismoramedina.books;
 
 @lombok.Data
 public class Book {

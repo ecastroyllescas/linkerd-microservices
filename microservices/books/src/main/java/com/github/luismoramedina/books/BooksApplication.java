@@ -1,4 +1,4 @@
-package com.github.luismoramedina.meshless;
+package com.github.luismoramedina.books;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/books")
 @Slf4j
-public class MeshlessBooksApplication {
+public class BooksApplication {
 
     @Autowired
     RestTemplate restTemplate;
@@ -28,7 +28,7 @@ public class MeshlessBooksApplication {
 	private String url;
 
 	public static void main(String[] args) {
-		SpringApplication.run(MeshlessBooksApplication.class, args);
+		SpringApplication.run(BooksApplication.class, args);
 	}
 
     @Bean
@@ -66,21 +66,15 @@ public class MeshlessBooksApplication {
       endersGame.year = "1985";
       endersGame.stars = stars.getBody().number;
       books.add(endersGame);
+      log.info("Sending response!");
+
       return books;
    }
 
    @RequestMapping(value = "/books-no-dep", method = RequestMethod.GET)
-   public List<Book> booksNoDep(
-      @RequestHeader(value="sec-istio-auth-userinfo", required = false) String userinfo,
-      @RequestHeader(value="Authorization", required = false) String auth,
-      @RequestHeader(value="X-B3-TraceId", required = false) String traceId,
-      @RequestHeader(value="Plain-authorization", required = false) String plainAuth) {
+   public List<Book> booksNoDep(@RequestHeader HttpHeaders httpHeaders) {
 
-      log.info("userinfo: " + userinfo);
-      log.info("traceId: " + traceId);
-      log.info("plainAuth: " + plainAuth);
-      log.info("auth: " + auth);
-
+      showRequestHeaders(httpHeaders);
 
       ArrayList<Book> books = new ArrayList<>();
       Book endersGame = new Book();
@@ -93,10 +87,22 @@ public class MeshlessBooksApplication {
       return books;
    }
 
-    @RequestMapping(method = RequestMethod.POST, consumes = "application/json")
+    private void showRequestHeaders(@RequestHeader HttpHeaders httpHeaders) {
+        log.info("New request!");
+        Map<String,String> headerMap = httpHeaders.toSingleValueMap();
+        headerMap.keySet().forEach(key -> {
+            String value = headerMap.get(key);
+            log.info("header: " + key + "->" + value);
+        });
+    }
+
+    @RequestMapping(method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     @ResponseStatus(HttpStatus.CREATED)
-    public Book newBook(@RequestBody Book book) {
+    public Book newBook(@RequestBody Book book, @RequestHeader HttpHeaders httpHeaders) {
+
+        showRequestHeaders(httpHeaders);
+
         log.info("new book: " + book);
         return book;
     }
