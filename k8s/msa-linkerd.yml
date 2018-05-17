@@ -27,8 +27,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: http_proxy
-            value: $(NODE_NAME):4140
+          - name: _JAVA_OPTIONS
+            value: "-Dhttp.proxyHost=$(NODE_NAME) -Dhttp.proxyPort=4140"
           # linkerd stuff
 ---
 apiVersion: v1
@@ -76,8 +76,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: http_proxy
-            value: $(NODE_NAME):4140
           # linkerd stuff
 ---
 apiVersion: v1
