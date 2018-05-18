@@ -1,5 +1,11 @@
 = Linkerd microservices
 
+== How to deploy
+
+NOTE: you need to make login in google cloud before running these scripts.
+
+== Mode per-host
+
 ----
 gcloud container clusters create linkerd-cluster --num-nodes 1 --machine-type n1-standard-2
 kubectl config set-context $(kubectl config current-context) --namespace=default
@@ -20,6 +26,8 @@ http_proxy=$L5D_IP:4141 curl -i http://books/books
 gcloud container clusters resize l-cluster --size=0
 gcloud container clusters delete linkerd-cluster
 ----
+
+== Mode sidecar
 
 ----
 gcloud container clusters create linkerd-sidecar-cluster --num-nodes 1 --machine-type n1-standard-2
