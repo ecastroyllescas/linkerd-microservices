@@ -1,0 +1,170 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: linkerd-config
+  namespace: default
+data:
+  config.yml: |-
+    admin:
+      ip: 0.0.0.0
+      port: 9990
+    namers:
+    - kind: io.l5d.k8s
+      host: localhost
+      port: 8001
+    telemetry:
+    - kind: io.l5d.prometheus
+    - kind: io.l5d.zipkin
+      host: zipkin-collector.default.svc.cluster.local
+      port: 9410
+      sampleRate: 1.0
+    - kind: io.l5d.recentRequests
+      sampleRate: 1.0
+    routers:
+      - protocol: http
+        label: incoming
+        servers:
+          - port: 4141
+            ip: 0.0.0.0
+        dtab: |
+          /svc => /$/inet/127.1/8081;
+      - protocol: http
+        label: outgoing
+        dtab: |
+          /srv        => /#/io.l5d.k8s/default/http;
+          /host       => /srv;
+          /svc        => /host;
+          /porthost   => /#/io.l5d.k8s/default;
+          /svc        => /$/io.buoyant.porthostPfx/porthost;
+        interpreter:
+          kind: default
+        servers:
+        - port: 4140
+          ip: 0.0.0.0
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: books
+spec:
+  replicas: 1
+  selector:
+    app: books
+  template:
+    metadata:
+      labels:
+        app: books
+    spec:
+      volumes:
+      - name: linkerd-config
+        configMap:
+          name: "linkerd-config"
+      containers:
+        - name: books
+          image: luismoramedina/books-l
+          imagePullPolicy: Always
+          env:
+          - name: SERVER_PORT
+            value: "8081"
+          - name: STARS_SERVICE_URI
+            value: http://stars/stars/{bookId}
+          - name: SPRING_APPLICATION_NAME
+            value: books
+          - name: _JAVA_OPTIONS
+            value: "-Dhttp.proxyHost=localhost -Dhttp.proxyPort=4140"
+        # proxy
+        - name: l5d
+          image: buoyantio/linkerd:1.3.6
+          args:
+          - /io.buoyant/linkerd/config/config.yml
+          ports:
+          - name: incoming
+            containerPort: 4141
+            hostPort: 4141
+          - name: admin
+            containerPort: 9990
+            hostPort: 9990
+          volumeMounts:
+          - name: "linkerd-config"
+            mountPath: "/io.buoyant/linkerd/config/"
+            readOnly: true
+        - name: kubectl
+          image: buoyantio/kubectl:v1.8.5
+          args:
+          - "proxy"
+          - "-p"
+          - "8001"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: books
+  labels:
+    app: books
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 4141
+    protocol: TCP
+    targetPort: 4141
+  - name: admin
+    port: 9990
+    protocol: TCP
+    targetPort: 9990
+  selector:
+    app: books
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: stars
+spec:
+  replicas: 1
+  selector:
+    app: stars
+  template:
+    metadata:
+      labels:
+        app: stars
+    spec:
+      volumes:
+      - name: linkerd-config
+        configMap:
+          name: "linkerd-config"
+      containers:
+        - name: stars
+          image: luismoramedina/stars-l
+          imagePullPolicy: Always
+          env:
+          - name: SPRING_APPLICATION_NAME
+            value: stars
+          - name: SERVER_PORT
+            value: "8081"
+        # proxy
+        - name: l5d
+          image: buoyantio/linkerd:1.3.6
+          args:
+          - /io.buoyant/linkerd/config/config.yml
+          volumeMounts:
+          - name: "linkerd-config"
+            mountPath: "/io.buoyant/linkerd/config/"
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stars
+  labels:
+    app: stars
+spec:
+  ports:
+  - name: http
+    port: 4141
+    protocol: TCP
+    targetPort: 4141
+  selector:
+    app: stars
+---
