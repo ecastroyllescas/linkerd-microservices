@@ -1,18 +1,41 @@
 = Linkerd microservices
 
 ----
-gcloud container clusters create l-cluster --num-nodes 1 --machine-type n1-standard-2
+gcloud container clusters create linkerd-cluster --num-nodes 1 --machine-type n1-standard-2
 kubectl config set-context $(kubectl config current-context) --namespace=default
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account)
 
-kubectl apply -f https://raw.githubusercontent.com/linkerd/linkerd-examples/master/k8s-daemonset/k8s/linkerd-rbac-beta.yml
-kubectl apply -f k8s/linkerd.yml
-kubectl apply -f k8s/msa-linkerd.yml
+kubectl apply -f k8s/linkerd-rbac.yml
+kubectl apply -f k8s/proxy-per-node/linkerd.yml
+kubectl apply -f k8s/proxy-per-node/msa-linkerd.yml
+kubectl apply -f k8s/zipkin.yml
 
 sleep 30s
-L5D_INGRESS_LB=$(kubectl get svc l5d -o jsonpath="{.status.loadBalancer.ingress[0].*}")
-echo http://$L5D_INGRESS_LB:9990
-xdg-open http://$L5D_INGRESS_LB:9990 # on ubuntu
-http_proxy=$L5D_INGRESS_LB:4140 curl -i http://books/books
+L5D_IP=$(kubectl get svc l5d -o jsonpath="{.status.loadBalancer.ingress[0].*}")
+echo http://$L5D_IP:9990
+xdg-open http://$L5D_IP:9990 # on ubuntu
+http_proxy=$L5D_IP:4141 curl -i http://books/books
 ...
-gcloud container clusters delete l-cluster
+# stop or delete cluster
+gcloud container clusters resize l-cluster --size=0
+gcloud container clusters delete linkerd-cluster
+----
+
+----
+gcloud container clusters create linkerd-sidecar-cluster --num-nodes 1 --machine-type n1-standard-2
+kubectl config set-context $(kubectl config current-context) --namespace=default
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account)
+
+kubectl apply -f k8s/linkerd-rbac.yml
+kubectl apply -f k8s/sidecar/sidecar-msa-linkerd.yml
+
+sleep 30s
+BOOKS_IP=$(kubectl get svc books -o jsonpath="{.status.loadBalancer.ingress[0].*}")
+echo http://$BOOKS_IP:9990
+xdg-open http://$BOOKS_IP:9990 # on ubuntu
+http_proxy=$BOOKS_IP:4141 curl -i http://books/books
+...
+# stop or delete cluster
+gcloud container clusters resize l-cluster --size=0
+gcloud container clusters delete linkerd-sidecar-cluster
 ----
